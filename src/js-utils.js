@@ -1,0 +1,337 @@
+import { STRING_NON_BLANK } from './js-constant.js'
+
+const URL_PATTERN = /http(s)?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}(\.[a-z]{2,6})?\b([-a-zA-Z0-9@:%_\+.~#?&\/\/=]*)/g
+const FALSY_VALUES = ['false', '0', 'no', 'off', '']
+
+export const isArray = Array.isArray
+export const objectKeys = Object.keys
+export const objectValues = Object.values
+export const objectEntries = obj => (isObject(obj) ? Object.entries(obj) : [])
+
+export function assert(condition, message, type) {
+  if (condition)
+    return
+
+  if (hasValue(type)) {
+    throw new Error(`Argument ${message} must be ${toArray(type).join(' or ')}`)
+  } else {
+    throw new Error(message || 'Assertion failed')
+  }
+}
+
+export function hasValue(value) {
+  return value != null
+}
+
+export function isBoolean(value) {
+  return typeof value === 'boolean' || value instanceof Boolean
+}
+
+export function isTrue(value) {
+  return hasValue(value) && (!FALSY_VALUES.includes(String(value).trim().toLowerCase()))
+}
+
+export function isInteger(value) {
+  return Number.isInteger(+value)
+}
+
+export function isString(str) {
+  return typeof str === 'string'
+}
+
+export function isNotBlank(str) {
+  return isString(str) && str.trim().length > 0
+}
+
+export function isFunction(func) {
+  return typeof func === 'function'
+}
+
+export function isPromise(p) {
+  return isObject(p) && isFunction(p.then) && isFunction(p.catch)
+}
+
+export function isObject(obj) {
+  return hasValue(obj) && typeof obj === 'object' && !isFunction(obj) && !isArray(obj)
+}
+
+export function isElement(el) {
+  return el instanceof Element || el instanceof DocumentFragment
+}
+
+export function isURL(str) {
+  return !!new RegExp(URL_PATTERN).test(str)
+}
+
+export function toArray(value, mapFn, thisArg) {
+  if (!hasValue(value)) {
+    return []
+  } else if (isArray(value)) {
+    return value.filter(hasValue)
+  } else if (!isString(value) && !(isElement(value)) && (isFunction(value[Symbol.iterator]) || value.length)) {
+    return Array.from(value, mapFn, thisArg).filter(hasValue)
+  } else {
+    return [ value ]
+  }
+}
+
+export function valueToString(value) {
+  if (isObject(value) || isArray(value))
+    return JSON.stringify(value)
+  if (hasValue(value))
+    return String(value)
+  return null
+}
+
+export function stringToValue(str) {
+  if (isObject(str) || isArray(str))
+    return str
+  try {
+    const parsed = JSON.parse(str)
+    return (isObject(parsed) || isArray(parsed)) ? parsed : null
+  } catch {
+    return null
+  }
+}
+
+export function split(str, delimiter) {
+  if (isArray(str))
+    return str.filter(hasValue)
+  if (!isString(str))
+    return [str].filter(hasValue)
+  if (!isNotBlank(str))
+    return []
+
+  const result = []
+  let current = ''
+  let i = 0
+
+  const useDefault = !delimiter
+  const delimiters = [',', ' ']
+  const delimLen = delimiter?.length || 0
+
+  while (i < str.length) {
+    if (str[i] === '\\') {
+      if (i + 1 < str.length) {
+        current += str[i] + str[i + 1]
+        i += 2
+      } else {
+        current += str[i]
+        i++
+      }
+    } else if (
+      useDefault
+        ? delimiters.includes(str[i])
+        : str.slice(i, i + delimLen) === delimiter
+    ) {
+      result.push(current)
+      current = ''
+      i += useDefault ? 1 : delimLen
+    } else {
+      current += str[i]
+      i++
+    }
+  }
+
+  if (current !== '') 
+    result.push(current)
+
+  return result.map(value => value.trim()).filter(isNotBlank)
+}
+
+export function startsWith(str, mark) {
+  return checkPrefixOrSuffix(str, mark, true)
+}
+
+export function endsWith(str, mark) {
+  return checkPrefixOrSuffix(str, mark, false)
+}
+
+export function toCamelCase(str) {
+  if (!isNotBlank(str))
+    return ''
+  return str.replace(/-([a-z])/g, (match, letter) => letter.toUpperCase())
+}
+
+export function toKebabCase(str) {
+  if (!isNotBlank(str))
+    return ''
+
+  let result = ''
+  for (let i = 0; i < str.length; i++) {
+    const letter = str[i]
+    const isUpper = letter.toUpperCase() === letter && letter !== '-'
+    result += (i !== 0 && isUpper ? '-' : '') + letter.toLowerCase()
+  }
+  return result
+}
+
+export function findObjectValue(obj, key) {
+  let value = obj
+  let currentKey = key
+  let exist = false
+
+  if (!isNotBlank(key) && !isObject(obj)) {
+    exist = true
+  } else if (isNotBlank(key)) {
+    const keys = split(key, '.')
+    keys.forEach(attr => {
+      currentKey = attr
+      value = value?.[attr]
+    })
+    if (!hasValue(value))
+      value = obj[keys.pop()]
+
+    exist = hasValue(value)
+  }
+
+  return { key: currentKey, value, exist }
+}
+
+export function formatNumber(value, n, x) {
+  const re = '\\d(?=(\\d{' + (x || 3) + '})+' + (n > 0 ? '\\.' : '$') + ')'
+  return value.toFixed(Math.max(0, ~~n)).replace(new RegExp(re, 'g'), '$&,')
+}
+
+export function formatString(template, args) {
+  if (isNotBlank(template)) {
+    return template.replace(/{([^}]+)}/g, (_, key) => {
+      let result
+      if (isObject(args)) {
+        const { exist, value } = findObjectValue(args, key)
+        exist && (result = value)
+      } else {
+        const param = toArray(args)
+        result = param[Number(key)]
+      }
+      return hasValue(result) ? result : ''
+    })
+  } else {
+    return isObject(args) ? JSON.stringify(args) : toArray(args).join()
+  }
+}
+
+export function formatDate(value, format = 'yyyy/MM/dd') {
+  const date = value instanceof Date ? value : new Date(parseInt(value))
+  let result = `${format}`
+  const dateValues = {
+    'M+': date.getMonth() + 1,
+    'd+': date.getDate(),
+    'h+': date.getHours(),
+    'H+': date.getHours(),
+    'm+': date.getMinutes(),
+    's+': date.getSeconds(),
+    'q+': Math.floor((date.getMonth() + 3) / 3),
+    'S': date.getMilliseconds()
+  }
+
+  if (/(y+)/.test(result))
+    result = result.replace(RegExp.$1, `${date.getFullYear()}`.substr(4 - RegExp.$1.length))
+
+  for (const [k, v] of objectEntries(dateValues))
+    if (new RegExp(`(${k})`).test(result))
+      result = result.replace(RegExp.$1, (RegExp.$1.length === 1) ? v : (`00${v}`.substr(`${v}`.length)))
+  return result
+}
+
+export function addBasePath(url, basePath) {
+  if (!isNotBlank(url) || isURL(url))
+    return url
+  if (!isNotBlank(basePath) || (basePath === '/') || url.includes(basePath))
+    return url
+
+  return (basePath + url).replace('//', '/')
+}
+
+export function delay(time) {
+  return new Promise(resolve => setTimeout(resolve, time))
+}
+
+export function debounce(callback, delay = 200, { leading = false, trailing = true } = {}) {
+  let timeout = null
+  let lastArgs = null
+  let hasCalledLeading = false
+
+  return function debounced(...args) {
+    lastArgs = args
+
+    clearTimeout(timeout)
+    timeout = setTimeout(() => {
+      timeout = null
+      if (trailing && (!leading || hasCalledLeading)) {
+        callback.apply(this, lastArgs)
+      }
+      hasCalledLeading = false
+    }, delay)
+
+    if (leading && !timeout) {
+      callback.apply(this, args)
+      hasCalledLeading = true
+    }
+  }
+}
+
+export function throttle(callback, wait = 200, { leading = true, trailing = true } = {}) {
+  let lastCallTime = 0
+  let timeout = null
+  let lastArgs = null
+
+  function invokeFn(time) {
+    lastCallTime = time
+    callback.apply(this, lastArgs)
+    lastArgs = null
+  }
+
+  return function throttled(...args) {
+    const now = Date.now()
+    const remaining = wait - (now - lastCallTime)
+    lastArgs = args
+
+    if (remaining <= 0 || lastCallTime === 0) {
+      if (timeout) {
+        clearTimeout(timeout)
+        timeout = null
+      }
+      if (leading) {
+        invokeFn.call(this, now)
+      } else {
+        lastCallTime = now
+      }
+    } else if (trailing && !timeout) {
+      timeout = setTimeout(() => {
+        timeout = null
+        if (trailing) {
+          invokeFn.call(this, Date.now())
+        }
+      }, remaining)
+    }
+  }
+}
+
+export function abortable(promiseFn, { abort } = {}) {
+  if (abort?.signal?.aborted)
+    return Promise.reject(new DOMException('Operation aborted', 'AbortError'))
+
+  const originalPromise = promiseFn()
+  const abortPromise = new Promise((_, reject) => {
+    abort?.signal?.addEventListener('abort', () => {
+      reject(new DOMException('Operation aborted', 'AbortError'))
+    }, { once: true })
+  })
+
+  return Promise.race([originalPromise, abortPromise])
+}
+
+function checkPrefixOrSuffix(str, mark, isStart) {
+  assert(isNotBlank(mark), 2, STRING_NON_BLANK)
+
+  let exist = false
+  let value = str
+
+  if (isNotBlank(str) && str.length > mark.length) {
+    exist = isStart ? str.startsWith(mark) : str.endsWith(mark)
+    if (exist)
+      value = isStart ? value.substring(mark.length) : value.substring(0, value.length - mark.length)
+  }
+  return { exist, value }
+}

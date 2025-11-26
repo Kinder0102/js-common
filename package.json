@@ -1,0 +1,34 @@
+{
+  "name": "js-common",
+  "version": "1.0.0",
+  "description": "",
+  "type": "module",
+  "homepage": "https://github.com/Kinder0102/js-common#readme",
+  "bugs": {
+    "url": "https://github.com/Kinder0102/js-common/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Kinder0102/js-common.git"
+  },
+  "license": "ISC",
+  "author": "Kinder0102",
+  "main": "index.js",
+  "exports": {
+    "./js-constant": "./src/js-constant.js",
+    "./js-utils": "./src/js-utils.js",
+    "./js-dom-utils": "./src/js-dom-utils.js",
+    "./js-dataset-helper": "./src/js-dataset-helper.js",
+    "./js-config": "./src/js-config.js",
+    "./js-cache": "./src/js-cache.js",
+    "./js-plugin": "./src/js-plugin.js",
+    "./js-dsl-factory": "./src/js-dsl-factory.js",
+    "./js-dom-helper": "./src/js-dom-helper.js"
+  },
+  "scripts": {
+    "build": "node build.js"
+  },
+  "devDependencies": {
+    "esbuild": "^0.27.0"
+  }
+}
