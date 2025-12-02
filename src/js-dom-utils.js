@@ -98,11 +98,17 @@ export function getTargets(targets, el) {
 }
 
 export function showElements(elements) {
-  checkElements(elements).forEach(elem => elem.style.display = '')
+  checkElements(elements).forEach(elem => {
+    removeClass(elem, 'hidden')
+    elem.style.display = ''
+  })
 }
 
 export function hideElements(elements) {
-  checkElements(elements).forEach(elem => elem.style.display = 'none')
+  checkElements(elements).forEach(elem => {
+    addClass(elem, 'hidden')
+    elem.style.display = 'none'
+  })
 }
 
 export function enableElements(elements) {
