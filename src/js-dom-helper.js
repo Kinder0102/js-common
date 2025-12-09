@@ -298,10 +298,10 @@ function replaceString(inputs, valueTypeFormat) {
 
 function processNumber(input, valueTypeFormat) {
   const format = createProperty(valueTypeFormat)[0]
-  format['*']?.forEach(value => input *= value)
-  format['/']?.forEach(value => input /= value)
-  format['+']?.forEach(value => input += value)
-  format['-']?.forEach(value => input -= value)
+  format['*']?.forEach(value => input *= Number(value))
+  format['/']?.forEach(value => input /= Number(value))
+  format['+']?.forEach(value => input += Number(value))
+  format['-']?.forEach(value => input -= Number(value))
   return formatNumber(input, format['.']?.[0])
 }
 
