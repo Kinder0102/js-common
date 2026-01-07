@@ -58,7 +58,7 @@ export const createTemplateHandler = templateProp => {
     } else {
       const props = createProperty(templateProp)[0]
       const templateTags = querySelector('template').map(elem => elem.content)
-      const selectors = objectEntries(props).reduce((acc, [ key, values ]) => {
+      const selectors = objectEntries(props).reduce((acc, [key, values]) => {
         if (key.includes('.')) {
           const [enumType, enumValue] = split(key, '.')
           acc[enumType] ||= {}
@@ -76,7 +76,7 @@ export const createTemplateHandler = templateProp => {
             break
           }
         }
-        let result = templateTags.map(tag => querySelector(selector, tag)).flat()[0]?.cloneNode?.(true)
+        let result = templateTags.flatMap(tag => querySelector(selector, tag))[0]?.cloneNode?.(true)
         result ||= createDefaultTemplate(item)
         result.removeAttribute?.('id')
         return result
@@ -131,7 +131,7 @@ class Comparable {
     for (const operator of Comparable.OPERATORS) {
       if (!prop.includes(operator))
         continue
-      
+
       const [key, values] = prop.split(operator)
       this.key = key
       this.#operator = operator
@@ -140,7 +140,7 @@ class Comparable {
           return true
         } else if (value === 'false') {
           return false
-        } else if (!isNaN(value)) {
+        } else if (!Number.isNaN(value)) {
           return Number(value)
         } else {
           return value
@@ -174,7 +174,7 @@ class Comparable {
           return value == item
       }
     })
-    .filter(hasValue)
-    .reduce((acc, item) => acc || item, false)
+      .filter(hasValue)
+      .reduce((acc, item) => acc || item, false)
   }
 }

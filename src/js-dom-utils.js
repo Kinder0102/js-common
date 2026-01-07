@@ -54,7 +54,7 @@ export function querySelector(selectors, el, includeSelf = false) {
       try {
         includeRoot && root.matches(selector) && result.add(root)
         root.querySelectorAll(selector).forEach(elem => result.add(elem))
-      } catch(_) { }
+      } catch (_) { }
     }
   }
   return toArray(result)
@@ -79,7 +79,7 @@ export function getTargets(targets, el) {
       }
       let closest = false
       let elems = selectors[0] in handlers ? [el] : [document]
-      
+
       for (const selector of selectors) {
         const handler = handlers[selector] ?? (values => {
           if (closest) {
@@ -152,7 +152,7 @@ export function registerEvent(elements, eventName, callback, options) {
 
 export function triggerEvent(elements, eventName, payload) {
   assert(isNotBlank(eventName), 2, STRING_NON_BLANK)
-  
+
   const event = new CustomEvent(eventName, { detail: payload })
   checkElements(elements).forEach(elem => elem.dispatchEvent(event))
 }

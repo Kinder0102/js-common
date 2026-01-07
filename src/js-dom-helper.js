@@ -41,8 +41,8 @@ const FILLED_CLASS_NAME = `${CLASS_NAME}-filled`
 const REMOVE_CLASS_NAME = `${CLASS_NAME}-remove`
 const LAST_CLASS_NAME = `${CLASS_NAME}-last`
 const SEQ_CLASS_NAME = `${CLASS_NAME}-seq`
-const ATTR_IGNORE_KEYS = [ 'format', 'enum', 'value-type' ]
-const ATTR_BOOLEAN_KEYS = [ 'disabled', 'readonly', 'required', 'checked', 'multiple', 'autofocus' ]
+const ATTR_IGNORE_KEYS = ['format', 'enum', 'value-type']
+const ATTR_BOOLEAN_KEYS = ['disabled', 'readonly', 'required', 'checked', 'multiple', 'autofocus']
 const ATTR_SEQ = 'array-seq'
 const CURRENT_INDEX_KEY = 'current-index'
 const TEMPLATE_KEY = 'template'
@@ -68,16 +68,16 @@ let SET_VALUE_HANDLERS = {
 }
 
 let GENERATE_VALUE_HANDLERS = {
-  date: (values, { format, valueTypeFormat }) =>
-    formatString(format, values.map(value => formatDate(value, valueTypeFormat))),
-  string: (values, { format, enums, valueTypeFormat }) =>
-    formatString(format, processEnum(enums, replaceString(values, valueTypeFormat))),
-  number: (values, { format, enums, valueTypeFormat }) =>
-    formatString(format, processEnum(enums,
-      processNumber(values.reduce((a, b) => a + Number(b), 0), valueTypeFormat))),
-  percentage: (values, { format, enums }) =>
-    processEnum(enums, `${formatNumber((values.reduce((a, b) => a + Number(b), 0) * 100), format)}%`),
-  fallback: (values, props) => processEnum(props.enums, values).join()
+  date: (values, { format, typeFormat }) =>
+    formatString(format, values.map(value => formatDate(value, typeFormat))),
+  string: (values, { format, typeFormat, ...rest }) =>
+    formatString(format, processEnum(rest.enum, replaceString(values, typeFormat))),
+  number: (values, { format, typeFormat, ...rest }) =>
+    formatString(format, processEnum(rest.enum,
+      processNumber(values.reduce((a, b) => a + Number(b), 0), typeFormat))),
+  percentage: (values, { format, ...rest }) =>
+    processEnum(rest.enum, `${formatNumber((values.reduce((a, b) => a + Number(b), 0) * 100), format)}%`),
+  fallback: (values, props) => processEnum(props.enum, values).join()
 }
 
 export default class DOMHelper {
@@ -98,7 +98,7 @@ export default class DOMHelper {
     const { template, group = 'item' } = opts
     const { getValue } = this.#datasetHelper
     const templateProp = template || getValue(el, TEMPLATE_KEY)
-    
+
     if (isArray(value) || isNotBlank(templateProp)) {
       const result = this.#setArrayToElement(el, toArray(value), templateProp)
       const { empty: [empty] = [] } = createProperty(getValue(el, TEMPLATE_KEY))[0]
@@ -155,8 +155,8 @@ export default class DOMHelper {
     const { getValue, setValue } = this.#datasetHelper
     const templateProp = template || getValue(el, TEMPLATE_KEY)
     const valueName = getValue(el, 'array-value')
-    let currentIndex = parseInt(getValue(el, CURRENT_INDEX_KEY)) || 0
-    
+    let currentIndex = Number.parseInt(getValue(el, CURRENT_INDEX_KEY)) || 0
+
     getArray(arr, getValue(el, 'array-index')).forEach(data => {
       const { value } = findObjectValue(data, valueName)
       let child
@@ -209,10 +209,10 @@ export default class DOMHelper {
       const { exist: isStartWith, value: type } = startsWith(key, `${CLASS_NAME}`)
       const { exist, value } = isStartWith
         ? (() => {
-            const [_, handler] = objectEntries(FIND_VALUE_HANDLERS).find(([name]) => type.includes(name)) || []
-            const value = handler?.(obj, key, el, this.#datasetHelper)
-            return { exist: hasValue(value), value }
-          })()
+          const [_, handler] = objectEntries(FIND_VALUE_HANDLERS).find(([name]) => type.includes(name)) || []
+          const value = handler?.(obj, key, el, this.#datasetHelper)
+          return { exist: hasValue(value), value }
+        })()
         : findObjectValue(obj, key)
 
       if (!exist) {
@@ -258,15 +258,9 @@ export default class DOMHelper {
   }
 
   #generateValue(value, el, tag) {
-    const { getValue } = this.#datasetHelper
-    const valueType = getValue(el, `${tag}-type`, 'string')
-    const props = {
-      format: getValue(el, `${tag}-format`),
-      valueTypeFormat: getValue(el, `${tag}-type-format`),
-      enums: getValue(el, `${tag}-enum`)
-    }
     const values = toArray(value)
-    const handler = GENERATE_VALUE_HANDLERS[valueType] || GENERATE_VALUE_HANDLERS.fallback
+    const props = this.#datasetHelper.resolveValues(el, tag)
+    const handler = GENERATE_VALUE_HANDLERS[props.type ?? 'string'] || GENERATE_VALUE_HANDLERS.fallback
     return values.length === 0 ? null : handler(values, props)
   }
 }
@@ -289,15 +283,15 @@ function reduceFilter(data, props) {
   }, true)
 }
 
-function replaceString(inputs, valueTypeFormat) {
-  const format = createProperty(valueTypeFormat)[0]
+function replaceString(inputs, typeFormat) {
+  const format = createProperty(typeFormat)[0]
   const value = format.value[0]
   const pattern = new RegExp(format.pattern?.[0] ?? /\.\w+$/, 'gi')
   return inputs.map(input => isNotBlank(value) ? input.replace(pattern, value) : input)
 }
 
-function processNumber(input, valueTypeFormat) {
-  const format = createProperty(valueTypeFormat)[0]
+function processNumber(input, typeFormat) {
+  const format = createProperty(typeFormat)[0]
   format['*']?.forEach(value => input *= Number(value))
   format['/']?.forEach(value => input /= Number(value))
   format['+']?.forEach(value => input += Number(value))

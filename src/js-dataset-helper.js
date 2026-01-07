@@ -1,5 +1,5 @@
 import { STRING_NON_BLANK, HTML_ELEMENT } from './js-constant.js'
-import { assert, hasValue, isNotBlank, isElement, objectKeys } from './js-utils.js'
+import { assert, hasValue, isNotBlank, isElement, toArray, objectKeys, toCamelCase } from './js-utils.js'
 
 export function createDatasetHelper(prefix = '') {
   const prefixStr = isNotBlank(prefix) ? prefix : ''
@@ -16,7 +16,7 @@ export function createDatasetHelper(prefix = '') {
   }
   const keyToDatasetName = key => {
     assert(isNotBlank(key), 1, STRING_NON_BLANK)
-    return prefixStr + key.replace(`data-${prefixConcat}`, '')
+    return prefixStr + key.replace(new RegExp(`^data-${prefixConcat}`), '')
       .replace(regex, group => group.toUpperCase())
       .replaceAll('-', '')
   }
@@ -31,7 +31,7 @@ export function createDatasetHelper(prefix = '') {
     const namePrefix = isNotBlank(prefix) ? `${prefix}-` : ''
     if (isNotBlank(prefix)) {
       const datasetName = keyToDatasetName(prefix)
-      result = result.filter(key => key.indexOf(datasetName) === 0)
+      result = result.filter(key => key.startsWith(datasetName))
     }
     return result.map(token => {
       const key = datasetNameToKey(token)
@@ -48,6 +48,16 @@ export function createDatasetHelper(prefix = '') {
     assert(isElement(el), 1, HTML_ELEMENT)
     el.dataset && (el.dataset[keyToDatasetName(key)] = value)
   }
+  const resolveValues = (el, key, additional = {}) => {
+    let result = { ...additional }
+    getKeys(el, key).forEach(({ key: type, name }) => {
+      const camelName = toCamelCase(name)
+      const props = getValue(el, type, '')
+      const current = result[camelName]
+      result[camelName] = hasValue(current) ? [...toArray(current), props] : props
+    })
+    return result
+  }
 
   return {
     keyToInputName,
@@ -56,6 +66,7 @@ export function createDatasetHelper(prefix = '') {
     datasetNameToKey,
     getKeys,
     getValue,
-    setValue
+    setValue,
+    resolveValues
   }
 }

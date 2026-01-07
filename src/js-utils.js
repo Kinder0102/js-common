@@ -71,7 +71,7 @@ export function toArray(value, mapFn, thisArg) {
   } else if (!isString(value) && !(isElement(value)) && (isFunction(value[Symbol.iterator]) || value.length)) {
     return Array.from(value, mapFn, thisArg).filter(hasValue)
   } else {
-    return [ value ]
+    return [value]
   }
 }
 
@@ -133,7 +133,7 @@ export function split(str, delimiter) {
     }
   }
 
-  if (current !== '') 
+  if (current !== '')
     result.push(current)
 
   return result.map(value => value.trim()).filter(isNotBlank)
@@ -212,7 +212,7 @@ export function formatString(template, args) {
 }
 
 export function formatDate(value, format = 'yyyy/MM/dd') {
-  const date = value instanceof Date ? value : new Date(parseInt(value))
+  const date = value instanceof Date ? value : new Date(Number.parseInt(value))
   let result = `${format}`
   const dateValues = {
     'M+': date.getMonth() + 1,
