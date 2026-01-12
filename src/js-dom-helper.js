@@ -318,5 +318,5 @@ function processEnum(enumProps, args = []) {
       enums = createProperty(enumProps)[0]
     }
   }
-  return args.map(key => toArray(enums[key] ?? enums.default ?? key)[0])
+  return toArray(args).map(key => toArray(enums[key] ?? enums.default ?? key)[0])
 }

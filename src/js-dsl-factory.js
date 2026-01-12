@@ -140,7 +140,7 @@ class Comparable {
           return true
         } else if (value === 'false') {
           return false
-        } else if (!Number.isNaN(value)) {
+        } else if (Number.isFinite(value)) {
           return Number(value)
         } else {
           return value
