@@ -234,6 +234,18 @@ export function formatDate(value, format = 'yyyy/MM/dd') {
   return result
 }
 
+export function jsonToQueryString(jsonObject) {
+  const params = new URLSearchParams()
+  for (const [key, value] of objectEntries(jsonObject)) {
+    if (isArray(value)) {
+      value.forEach(item => params.append(key, item))
+    } else if (hasValue(value)) {
+      params.append(key, value)
+    }
+  }
+  return params.toString()
+}
+
 export function addBasePath(url, basePath) {
   if (!isNotBlank(url) || isURL(url))
     return url
