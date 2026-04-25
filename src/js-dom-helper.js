@@ -25,6 +25,7 @@ import {
 
 import {
   elementIs,
+  hasClass,
   addClass,
   querySelector,
   showElements,
@@ -111,6 +112,11 @@ export default class DOMHelper {
       })
     } else {
       this.#setValueToElement(el, value)
+      ELEMENT_CACHE.set(el, (elements = {}) => {
+        elements[group] ||= []
+        elements[group].push(el)
+        return elements
+      })
     }
   }
 
@@ -120,8 +126,12 @@ export default class DOMHelper {
     ELEMENT_CACHE.set(el, (elements = {}) => {
       elements[group] ||= []
       elements[group].forEach(elem => {
-        elem?.remove?.()
-        querySelector(`.${FILLED_CLASS_NAME}`, elem, true).forEach(fill => this.#setValue(fill, ''))
+        if (hasClass(elem, CREATE_CLASS_NAME)) {
+          hasClass(elem, CREATE_CLASS_NAME) && elem?.remove?.()
+        } else {
+          querySelector(`.${CREATE_CLASS_NAME}`, elem, true).forEach(create => create.remove())
+          querySelector(`.${FILLED_CLASS_NAME}`, elem, true).forEach(fill => this.#setValue(fill, ''))
+        }
       })
       elements[group].length = 0
       return elements
