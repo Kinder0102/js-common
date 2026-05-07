@@ -68,6 +68,7 @@ export class PluginHost {
 export class Plugin {
 
   #pluginHosts = new Set()
+  #messages = []
 
   constructor(pluginName, pluginRoot, initialize) {
     assert(isNotBlank(pluginName), 0, STRING_NON_BLANK)
@@ -78,6 +79,7 @@ export class Plugin {
         const { systemRoot } = event.detail
         this.#pluginHosts.add(systemRoot)
         triggerEvent(systemRoot, EVENT_REGISTER, { pluginName, pluginRoot })
+        this.#messages.forEach(({ eventName, payload }) => this.#send(eventName, payload))
       })
     }
 
@@ -90,8 +92,14 @@ export class Plugin {
   }
 
   broadcast(eventName, payload) {
-    for (const plugin of this.#pluginHosts) {
-      triggerEvent(plugin, eventName, payload)
+    if (this.#pluginHosts.size > 0) {
+      this.#send(eventName, payload)
+    } else {
+      this.#messages.push({ eventName, payload })
     }
+  }
+
+  #send(eventName, payload) {
+    this.#pluginHosts.forEach(host => triggerEvent(host, eventName, payload))
   }
 }
