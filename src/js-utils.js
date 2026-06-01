@@ -171,7 +171,8 @@ export function findObjectValue(obj, key) {
   let currentKey = key
   let exist = false
 
-  if (!isNotBlank(key) && !isObject(obj)) {
+  if (!hasValue(obj)) {
+  } else if (!isNotBlank(key) && !isObject(obj)) {
     exist = true
   } else if (isNotBlank(key)) {
     const keys = split(key, '.')
