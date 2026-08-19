@@ -15,15 +15,16 @@
   "author": "Kinder0102",
   "main": "index.js",
   "exports": {
-    "./js-constant": "./src/js-constant.js",
-    "./js-utils": "./src/js-utils.js",
-    "./js-dom-utils": "./src/js-dom-utils.js",
-    "./js-dataset-helper": "./src/js-dataset-helper.js",
-    "./js-config": "./src/js-config.js",
     "./js-cache": "./src/js-cache.js",
-    "./js-plugin": "./src/js-plugin.js",
+    "./js-config": "./src/js-config.js",
+    "./js-constant": "./src/js-constant.js",
+    "./js-dataset-helper": "./src/js-dataset-helper.js",
+    "./js-dom-helper": "./src/js-dom-helper.js",
+    "./js-dom-utils": "./src/js-dom-utils.js",
     "./js-dsl-factory": "./src/js-dsl-factory.js",
-    "./js-dom-helper": "./src/js-dom-helper.js"
+    "./js-plugin": "./src/js-plugin.js",
+    "./js-utils": "./src/js-utils.js",
+    "./js-value-processor": "./src/js-value-processor.js"
   },
   "scripts": {
     "build": "node build.js"
