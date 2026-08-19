@@ -19,33 +19,34 @@ import {
 import { querySelector } from './js-dom-utils.js'
 import { createCache } from './js-cache.js'
 
+const DEFAULT_PROP = { type: [], value: [] }
 const PROPERTY_CACHE = createCache()
 const TEMPLATE_CACHE = createCache()
 const FILTER_CACHE = createCache()
 
 export const createProperty = props => {
-  return toArray(props || '').map(prop => {
-    if (isObject(prop)) {
-      return prop
-    } else if (isFunction(prop)) {
-      return { type: [FUNCTION], value: [prop] }
-    } else {
-      return PROPERTY_CACHE.get(prop, () => {
-        let result = { type: [], value: [] }
-        split(prop, '|').forEach(token => {
-          if (isURL(token)) {
-            result.value.push(token)
-          } else {
-            let [key, value] = token.includes(':') ? split(token, ':') : [null, token]
-            const escapedKey = key?.replace(/\\(.)/g, '$1')
-            const values = split(value, ',').map(value => value.replace(/\\(.)/g, '$1'))
-            isNotBlank(escapedKey) ? (result[escapedKey] = values) : result.value.push(...values)
-          }
-        })
-        return result
+  if (isObject(props)) {
+    return props
+  } else if (isFunction(props)) {
+    return { type: [FUNCTION], value: [props] }
+  } else if (isNotBlank(props)) {
+    return PROPERTY_CACHE.get(props, () => {
+      let result = JSON.parse(JSON.stringify(DEFAULT_PROP))
+      split(props, '|').forEach(token => {
+        if (isURL(token)) {
+          result.value.push(token)
+        } else {
+          let [key, value] = /(?<!\\):/.test(token) ? split(token, ':') : [null, token]
+          const escapedKey = key?.replace(/\\(.)/g, '$1')
+          const values = split(value, ',').map(value => value.replace(/\\(.)/g, '$1'))
+          isNotBlank(escapedKey) ? (result[escapedKey] = values) : result.value.push(...values)
+        }
       })
-    }
-  })
+      return result
+    })
+  } else {
+    return JSON.parse(JSON.stringify(DEFAULT_PROP))
+  }
 }
 
 export const createTemplateHandler = templateProp => {
@@ -56,7 +57,7 @@ export const createTemplateHandler = templateProp => {
     } else if (!isNotBlank(templateProp)) {
       handler.getTemplate = createDefaultTemplate
     } else {
-      const props = createProperty(templateProp)[0]
+      const props = createProperty(templateProp)
       const templateTags = querySelector('template').map(elem => elem.content)
       const selectors = objectEntries(props).reduce((acc, [key, values]) => {
         if (key.includes('.')) {
@@ -87,7 +88,7 @@ export const createTemplateHandler = templateProp => {
 }
 
 export const createFilter = filterProp => {
-  const props = createProperty(filterProp)[0]
+  const props = createProperty(filterProp)
   const comparables = props.value.reduce((acc, prop) => {
     const comparable = Comparable.create(prop)
     acc[comparable.key] ||= []

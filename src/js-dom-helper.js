@@ -35,6 +35,7 @@ import {
 import { createDatasetHelper } from './js-dataset-helper.js'
 import { createProperty, createFilter, createTemplateHandler } from './js-dsl-factory.js'
 import { createCache } from './js-cache.js'
+import ValueProcessor from './js-value-processor.js'
 
 const CLASS_NAME = 'dom-helper'
 const CREATE_CLASS_NAME = `${CLASS_NAME}-create`
@@ -68,17 +69,12 @@ let SET_VALUE_HANDLERS = {
   fallback: (el, value) => el.textContent = value
 }
 
-let GENERATE_VALUE_HANDLERS = {
-  date: (values, { format, typeFormat }) =>
-    formatString(format, values.map(value => formatDate(value, typeFormat))),
-  string: (values, { format, typeFormat, ...rest }) =>
-    formatString(format, processEnum(rest.enum, replaceString(values, typeFormat))),
-  number: (values, { format, typeFormat, ...rest }) =>
-    formatString(format, processEnum(rest.enum,
-      processNumber(values.reduce((a, b) => a + Number(b), 0), typeFormat))),
-  percentage: (values, { format, ...rest }) =>
-    processEnum(rest.enum, `${formatNumber((values.reduce((a, b) => a + Number(b), 0) * 100), format)}%`),
-  fallback: (values, props) => processEnum(props.enum, values).join()
+let PROCESSOR_HANDLERS = {
+  type: {
+    date: (values, _, props) => formatString(props.get('format'), values.map(value => formatDate(value, props.get('typeFormat')))),
+    number: (values, _, props) => formatString(props.get('format'), processEnum(props.get('enum'), processNumber(values.reduce((a, b) => a + Number(b), 0), props.get('typeFormat')))),
+    fallback: (values, _, props) => formatString(props.get('format'), processEnum(props.get('enum'), replaceString(values, props.get('typeFormat')))),
+  },
 }
 
 export default class DOMHelper {
@@ -86,11 +82,21 @@ export default class DOMHelper {
   #prefix
   #basePath
   #datasetHelper
+  #valueProcessor
+  #valueTypeProcessor
+  #classProcessor
+  #attrProcessor
 
   constructor(opts = {}) {
-    this.#prefix = opts.prefix
-    this.#basePath = opts.basePath || '/'
-    this.#datasetHelper = createDatasetHelper(opts.prefix)
+    const { prefix, basePath } = opts
+    this.#prefix = prefix
+    this.#basePath = basePath ?? '/'
+    this.#datasetHelper = createDatasetHelper(prefix)
+    
+    const handlers = { ...PROCESSOR_HANDLERS }
+    this.#valueProcessor = new ValueProcessor({ key: 'value', prefix, handlers })
+    this.#classProcessor = new ValueProcessor({ key: 'class', prefix, handlers })
+    this.#attrProcessor = new ValueProcessor({ prefix, handlers})
   }
 
   setValueToElement(el, value, opts = {}) {
@@ -102,7 +108,7 @@ export default class DOMHelper {
 
     if (isArray(value) || isNotBlank(templateProp)) {
       const result = this.#setArrayToElement(el, toArray(value), templateProp)
-      const { empty: [empty] = [] } = createProperty(getValue(el, TEMPLATE_KEY))[0]
+      const { empty: [empty] = [] } = createProperty(getValue(el, TEMPLATE_KEY))
       ELEMENT_CACHE.set(el, (elements = {}) => {
         elements[group] ||= []
         result.forEach(elem => elements[group].push(elem))
@@ -211,7 +217,7 @@ export default class DOMHelper {
 
   #fillElement(el, obj, datasetName, fillHandler) {
     const attrValue = this.#datasetHelper.getValue(el, datasetName, '')
-    const { value: keys, name: attr } = createProperty(attrValue)[0]
+    const { value: keys, name: attr } = createProperty(attrValue)
     const arrayValues = []
     const values = []
 
@@ -236,15 +242,14 @@ export default class DOMHelper {
   }
 
   #setClass(el, value, arrayValues) {
-    split(this.#generateValue(value, el, 'class'))
+    split(this.#classProcessor.process(el, value))
       .filter(isNotBlank)
       .forEach(value => addClass(el, value))
   }
 
   #setAttr(el, value, arrayValues, attrName) {
     let tag = attrName.replace('attr-', '')
-    const valueFormat = this.#generateValue(value, el, attrName)
-
+    const valueFormat = this.#attrProcessor.process(el, value, attrName)
     if (hasValue(valueFormat)) {
       !tag.includes('data-') && (tag = toCamelCase(tag))
       if (ATTR_BOOLEAN_KEYS.includes(tag)) {
@@ -260,18 +265,11 @@ export default class DOMHelper {
       arrayValues.forEach(value => this.#setArrayToElement(el, value))
     } else {
       addClass(el, FILLED_CLASS_NAME)
-      const valueFormat = this.#generateValue(value, el, 'value')
+      const valueFormat = this.#valueProcessor.process(el, value)
       const handler = SET_VALUE_HANDLERS[el.tagName?.toLowerCase()] || SET_VALUE_HANDLERS.fallback
       if (hasValue(valueFormat))
         handler(el, valueFormat, { basePath: this.#basePath })
     }
-  }
-
-  #generateValue(value, el, tag) {
-    const values = toArray(value)
-    const props = this.#datasetHelper.resolveValues(el, tag)
-    const handler = GENERATE_VALUE_HANDLERS[props.type ?? 'string'] || GENERATE_VALUE_HANDLERS.fallback
-    return values.length === 0 ? null : handler(values, props)
   }
 }
 
@@ -294,14 +292,14 @@ function reduceFilter(data, props) {
 }
 
 function replaceString(inputs, typeFormat) {
-  const format = createProperty(typeFormat)[0]
+  const format = createProperty(typeFormat)
   const value = format.value[0]
   const pattern = new RegExp(format.pattern?.[0] ?? /\.\w+$/, 'gi')
-  return inputs.map(input => isNotBlank(value) ? input.replace(pattern, value) : input)
+  return toArray(inputs).map(input => isNotBlank(value) ? input.replace(pattern, value) : input)
 }
 
 function processNumber(input, typeFormat) {
-  const format = createProperty(typeFormat)[0]
+  const format = createProperty(typeFormat)
   format['*']?.forEach(value => input *= Number(value))
   format['/']?.forEach(value => input /= Number(value))
   format['+']?.forEach(value => input += Number(value))
@@ -310,23 +308,30 @@ function processNumber(input, typeFormat) {
 }
 
 function processEnum(enumProps, args = []) {
-  if (!isNotBlank(enumProps))
-    return args
-
   let enums = {}
-  if (isObject(window[enumProps])) {
-    enums = window[enumProps]
-  } else {
-    const el = querySelector(enumProps)[0]
-    if (isElement(el)) {
-      if (hasValue(el.options)) {
-        toArray(el.options).forEach(({ value, text }) => (enums[value] = text))
-      } else {
-        enums = stringToValue(el.value)
-      }
+  if (isNotBlank(enumProps)) {
+    if (isObject(window[enumProps])) {
+      enums = window[enumProps]
     } else {
-      enums = createProperty(enumProps)[0]
+      const el = querySelector(enumProps)[0]
+      if (isElement(el)) {
+        if (hasValue(el.options)) {
+          toArray(el.options).forEach(({ value, text }) => (enums[value] = text))
+        } else {
+          enums = stringToValue(el.value)
+        }
+      } else {
+        enums = createProperty(enumProps)
+      }
     }
+  } else if (isObject(enumProps)) {
+    enums = enumProps
+  } else {
+    return args
   }
+  
   return toArray(args).map(key => toArray(enums[key] ?? enums.default ?? key)[0])
 }
+
+globalThis.DOMHelper = DOMHelper
+
