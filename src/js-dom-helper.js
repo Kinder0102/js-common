@@ -42,19 +42,16 @@ const CREATE_CLASS_NAME = `${CLASS_NAME}-create`
 const FILLED_CLASS_NAME = `${CLASS_NAME}-filled`
 const REMOVE_CLASS_NAME = `${CLASS_NAME}-remove`
 const LAST_CLASS_NAME = `${CLASS_NAME}-last`
-const SEQ_CLASS_NAME = `${CLASS_NAME}-seq`
 const ATTR_IGNORE_KEYS = ['format', 'enum', 'value-type']
 const ATTR_BOOLEAN_KEYS = ['disabled', 'readonly', 'required', 'checked', 'multiple', 'autofocus']
 const ATTR_SEQ = 'array-seq'
-const CURRENT_INDEX_KEY = 'current-index'
 const TEMPLATE_KEY = 'template'
 const PARENT_KEY = 'parent'
-const ELEMENT_CACHE = createCache()
 
 let FIND_VALUE_HANDLERS = {
   value: (value, key) => value,
   index: (value, key, el, helper) =>
-    split(helper.getValue(el.closest(`.${SEQ_CLASS_NAME}`), ATTR_SEQ, ''))[key.split(PARENT_KEY).length - 1],
+    split(helper.getValue(el.closest(`[${helper.keyToAttrName(ATTR_SEQ)}]`), ATTR_SEQ, ''))[key.split(PARENT_KEY).length - 1],
 }
 
 let SET_VALUE_HANDLERS = {
@@ -107,47 +104,26 @@ export default class DOMHelper {
     const templateProp = template || getValue(el, TEMPLATE_KEY)
 
     if (isArray(value) || isNotBlank(templateProp)) {
-      const result = this.#setArrayToElement(el, toArray(value), templateProp)
+      let result = this.#setArrayToElement(el, toArray(value), templateProp)
       const { empty: [empty] = [] } = createProperty(getValue(el, TEMPLATE_KEY))
-      ELEMENT_CACHE.set(el, (elements = {}) => {
-        elements[group] ||= []
-        result.forEach(elem => elements[group].push(elem))
-        if (result.length === 0 && isNotBlank(empty))
-          elements[group].push(...this.#setArrayToElement?.(el, [{}], empty))
-        return elements
-      })
+      if (result.length === 0 && isNotBlank(empty))
+        result = this.#setArrayToElement?.(el, [{}], empty)
+      result.forEach(elem => addClass(elem, `${CREATE_CLASS_NAME}-${group}`))
     } else {
       this.#setValueToElement(el, value)
-      ELEMENT_CACHE.set(el, (elements = {}) => {
-        elements[group] ||= []
-        elements[group].push(el)
-        return elements
-      })
     }
   }
 
   clearElement(el, group = 'item') {
+    const createClassName = `${CREATE_CLASS_NAME}-${group}`
     assert(isElement(el), 1, HTML_ELEMENT)
     querySelector(`.${REMOVE_CLASS_NAME}`, el, true).forEach(elem => elem.remove())
-    ELEMENT_CACHE.set(el, (elements = {}) => {
-      elements[group] ||= []
-      elements[group].forEach(elem => {
-        if (hasClass(elem, CREATE_CLASS_NAME)) {
-          hasClass(elem, CREATE_CLASS_NAME) && elem?.remove?.()
-        } else {
-          this.emptyElement(el)
-        }
-      })
-      elements[group].length = 0
-      return elements
-    })
-    if (group === 'item')
-      this.#datasetHelper.setValue(el, CURRENT_INDEX_KEY, 0)
-  }
-
-  emptyElement(el) {
-    querySelector(`.${CREATE_CLASS_NAME}`, el).forEach(create => create.remove())
-    querySelector(`.${FILLED_CLASS_NAME}`, el, true).forEach(fill => this.#setValue(fill, ''))
+    if (hasClass(el, createClassName)) {
+      hasClass(el, createClassName) && el?.remove?.()
+    } else {
+      querySelector(`.${createClassName}`, el, true).forEach(create => create.remove())
+      querySelector(`.${FILLED_CLASS_NAME}`, el, true).forEach(fill => this.#setValue(fill, ''))
+    }
   }
 
   #setValueToElement(el, value) {
@@ -176,7 +152,7 @@ export default class DOMHelper {
     const { getValue, setValue } = this.#datasetHelper
     const templateProp = template || getValue(el, TEMPLATE_KEY)
     const valueName = getValue(el, 'array-value')
-    let currentIndex = Number.parseInt(getValue(el, CURRENT_INDEX_KEY)) || 0
+    const attrSeqSelector = this.#datasetHelper.keyToAttrName(ATTR_SEQ)
 
     getArray(arr, getValue(el, 'array-index')).forEach(data => {
       const { value } = findObjectValue(data, valueName)
@@ -188,11 +164,10 @@ export default class DOMHelper {
         el.value = value
       } else {
         child = createTemplateHandler(templateProp).getTemplate(value)
-        const seqPath = getValue(el.closest(`.${SEQ_CLASS_NAME}`), ATTR_SEQ, '')
-        addClass(child, [CREATE_CLASS_NAME, SEQ_CLASS_NAME])
-        setValue(child, ATTR_SEQ, `${currentIndex++},${seqPath}`)
+        const seqPath = getValue(el.closest(`[${attrSeqSelector}]`), ATTR_SEQ, '')
+        const currentIndex = querySelector(`:scope > [${attrSeqSelector}]`, el).length
+        setValue(child, ATTR_SEQ, `${currentIndex + 1},${seqPath}`)
         this.setValueToElement(child, value)
-        setValue(el, CURRENT_INDEX_KEY, currentIndex)
       }
 
       if (isElement(child) && !child._removed) {
@@ -270,7 +245,7 @@ export default class DOMHelper {
       arrayValues.forEach(value => this.#setArrayToElement(el, value))
     } else {
       addClass(el, FILLED_CLASS_NAME)
-      const valueFormat = this.#valueProcessor.process(el, value)
+      const valueFormat = this.#valueProcessor.process(el, toArray(value))
       const handler = SET_VALUE_HANDLERS[el.tagName?.toLowerCase()] || SET_VALUE_HANDLERS.fallback
       if (hasValue(valueFormat))
         handler(el, valueFormat, { basePath: this.#basePath })
