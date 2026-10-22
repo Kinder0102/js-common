@@ -59,14 +59,27 @@ L5  js-dom-helper
 - **不要改 `data-*` 鍵名或語義**。鍵名即公開 API，改動等於破壞下游 HTML。
 - **不要讓 `src/` 依賴 `dist/`**，也不要提交 `dist/`。
 - **`js-dom-helper` 視爲黑盒**：內部結構可重構，但對外可觀察的行爲（寫入的 class、`dom-helper-index` 系列取值、`setValueToElement` / `clearElement` 的效果）必須保持不變。
-- 改完沒有任何自動化測試可跑：`npm run build` 確認可構建，再用 `dist/test.html` 手工驗證。
+- **改完先跑 `npm test`**，再跑 `npm run build`；`dist/test.html` 只作補充驗證。
+
+## 測試
+
+```bash
+npm test              # node:test + jsdom，逐文件獨立進程
+npm run test:coverage # 附覆蓋率報告（僅報告，不設硬閘）
+```
+
+- 測試在 `test/`，與 `src/` **一一鏡像**：改 `src/js-cache.js` 就要動 `test/js-cache.test.js`，新增模塊必須補對應測試文件。
+- `test/setup.js` 用 `--import` 預先裝配 jsdom 全局；`test/helpers/dom.js` 提供 `mount` / `cleanup`，**每個用例自建 fixture**，不要共享 DOM。
+- 只測 `exports` 列出的公開面，私有函數不直接斷言（ADR-0008）。`js-dom-helper` 按黑盒測。
+- 現存缺陷按**現狀**寫斷言並註釋標明 characterization，缺陷本身記在 `docs/KNOWN-GAPS.md`。修缺陷時測試會變紅，這是預期信號。
+- 尚未覆蓋的面見 `docs/KNOWN-GAPS.md` 的「測試覆蓋缺口」。
 
 ## 文檔地圖
 
 | 文檔 | 內容 |
 |---|---|
 | [`GLOSSARY.md`](./GLOSSARY.md) | 術語表 |
-| [`docs/adr/`](./docs/adr/) | 7 篇決策記錄：0001 無根入口、0002 `data-*` 即契約、0003 可逆 class 標記、0004 pipeline 與 `piplines` 拼寫凍結、0005 插件事件握手、0006 assert 風格、0007 模塊級緩存 |
+| [`docs/adr/`](./docs/adr/) | 8 篇決策記錄：0001 無根入口、0002 `data-*` 即契約、0003 可逆 class 標記、0004 pipeline 與 `piplines` 拼寫凍結、0005 插件事件握手、0006 assert 風格、0007 模塊級緩存、0008 測試策略 |
 | [`docs/api/`](./docs/api/README.md) | 對外 API 全量條目：一頁一模塊、一節一符號 |
 | [`docs/api/js-dsl-factory.md`](./docs/api/js-dsl-factory.md) | DSL 語法、轉義、filter 運算符 |
 | [`docs/api/js-dom-helper.md`](./docs/api/js-dom-helper.md) | `DOMHelper` 用法與全部 `data-*` 鍵 |
