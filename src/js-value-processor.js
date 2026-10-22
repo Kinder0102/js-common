@@ -18,7 +18,7 @@ const CONST = {
   TRANSFORM: 'transform',
 }
 
-const DEFAULT_PIPLINE = {
+const DEFAULT_PIPELINE = {
   [CONST.TYPE]: undefined,
 	[CONST.TRANSFORM]: undefined,
 	[CONST.FORMAT]: undefined,
@@ -30,30 +30,30 @@ export default class ValueProcessor {
 
 	#key
   #datasetHelper
-  #piplines
+  #pipelines
   #handlers
 
   constructor(opts = {}) {
   	this.#key = opts.key
     this.#datasetHelper = createDatasetHelper(opts.prefix)
-    this.#piplines = { ...DEFAULT_PIPLINE, ...opts.piplines }
+    this.#pipelines = { ...DEFAULT_PIPELINE, ...opts.pipelines }
     this.#handlers = opts.handlers ?? {}
   }
 
-  addPipline(piplineKey, callback) {
-  	assert(isNotBlank(piplineKey), 1, STRING_NON_BLANK)
+  addPipeline(pipelineKey, callback) {
+  	assert(isNotBlank(pipelineKey), 1, STRING_NON_BLANK)
   	if (hasValue(callback))
     	assert(isFunction(callback), 2, FUNCTION)
-    this.#piplines[piplineKey] = callback
+    this.#pipelines[pipelineKey] = callback
   }
 
-  addHandler(piplineKey, handlerKey, callback) {
-  	assert(isNotBlank(piplineKey), 1, STRING_NON_BLANK)
+  addHandler(pipelineKey, handlerKey, callback) {
+  	assert(isNotBlank(pipelineKey), 1, STRING_NON_BLANK)
     assert(isNotBlank(handlerKey), 2, STRING_NON_BLANK)
     assert(isFunction(callback), 3, FUNCTION)
-    if (piplineKey in this.#piplines) {
-    	this.#handlers[piplineKey] ||= {}
-    	this.#handlers[piplineKey][handlerKey] = callback
+    if (pipelineKey in this.#pipelines) {
+    	this.#handlers[pipelineKey] ||= {}
+    	this.#handlers[pipelineKey][handlerKey] = callback
     }
   }
 
@@ -65,9 +65,9 @@ export default class ValueProcessor {
     const propValue = defaultGetHandlerKey(props)
 
   	let result = value
-  	for (const [piplineKey, getHandlerKey = defaultGetHandlerKey] of objectEntries(this.#piplines)) {
-  		const handlerKey = getHandlerKey(props[piplineKey])
-      const handler = this.#handlers[piplineKey]?.[handlerKey] ?? this.#handlers[piplineKey]?.fallback
+  	for (const [pipelineKey, getHandlerKey = defaultGetHandlerKey] of objectEntries(this.#pipelines)) {
+  		const handlerKey = getHandlerKey(props[pipelineKey])
+      const handler = this.#handlers[pipelineKey]?.[handlerKey] ?? this.#handlers[pipelineKey]?.fallback
   		result = handler?.(result, propValue, props) ?? result
   	}
   	return result

@@ -22,7 +22,7 @@ AIGC:
 - 一個 `ValueProcessor` 對應**一個 DSL 鍵**（`value`、`class`、`attr`…），構造時以 `key` 指定。
 - pipeline 是一條**固定順序的鏈**：預設 `type → transform → format`，自訂 pipeline 追加在後。每個環節都吃前一個的輸出。
 - 每個環節用「props 上的同名鍵」決定要跑哪個 handler；找不到就用該環節的 `fallback`；連 `fallback` 都沒有就原值透傳。
-- **拼寫凍結**：`piplines` / `addPipline` 少一個 `e`，是對外契約，不可「順手修正」，見 [ADR-0004](../adr/0004-pipeline-and-piplines-freeze.md)。
+- 命名用標準拼寫：構造選項 `pipelines`、方法 `addPipeline`，見 [ADR-0004](../adr/0004-pipeline-and-handler-fallback.md)。
 
 ---
 
@@ -32,7 +32,7 @@ AIGC:
 new ValueProcessor(opts?: {
   key?: string,
   prefix?: string,
-  piplines?: Record<string, (prop) => string>,
+  pipelines?: Record<string, (prop) => string>,
   handlers?: Record<string, Record<string, Function>>
 })
 ```
@@ -43,10 +43,10 @@ new ValueProcessor(opts?: {
 |---|---|---|---|---|
 | `key` | `string` | 否 | `undefined` | 默認讀哪個 DSL 鍵，如 `'value'`；`process()` 第三參數可覆寫 |
 | `prefix` | `string` | 否 | `''` | 傳給 `createDatasetHelper` 的命名空間 |
-| `piplines` | `object` | 否 | `{}` | 追加的 pipeline，鍵為環節名，值為「如何從 props 取 handlerKey」的函數 |
+| `pipelines` | `object` | 否 | `{}` | 追加的 pipeline，鍵為環節名，值為「如何從 props 取 handlerKey」的函數 |
 | `handlers` | `object` | 否 | `{}` | 環節名 → handlerKey → 處理函數 |
 
-實際執行順序 = `DEFAULT_PIPLINE`（`type`、`transform`、`format`）在前，`opts.piplines` 的自訂鍵在後。
+實際執行順序 = `DEFAULT_PIPELINE`（`type`、`transform`、`format`）在前，`opts.pipelines` 的自訂鍵在後。
 
 ### 靜態屬性
 
@@ -89,7 +89,7 @@ process(el: Element, value: any, key?: string): any
 
 - **空值回 `undefined`，不是原值**。呼叫方若直接拿結果去 `setAttribute`，會得到字串 `'undefined'`；先判斷 `hasValue`。
 - **handler 回傳 `undefined` 視為「不處理」**，保留上一環結果；但回傳 `0`、`''`、`false` 會被採用（`??` 只擋 `null`/`undefined`）。
-- **`addHandler` 對「尚未加入的環節」靜默無效**：必須先 `addPipline` 建環節，再掛 handler，順序反了 handler 直接丟失（無錯誤、無警告）。
+- **`addHandler` 對「尚未加入的環節」靜默無效**：必須先 `addPipeline` 建環節，再掛 handler，順序反了 handler 直接丟失（無錯誤、無警告）。
 - props 裡的值是 `{ type, value }` 物件，不是字串。寫 handler 時用 `props.get('format')`，不要用 `props.format`。
 - 第二個參數 `主值` 對多數 handler 無用，`DOMHelper` 內建 handler 就把它當 `_` 忽略。
 
@@ -105,39 +105,39 @@ processor.process(el, '3')
 
 ---
 
-### addPipline(piplineKey, callback)
+### addPipeline(pipelineKey, callback)
 
 ```js
-addPipline(piplineKey: string, callback?: (prop) => string): void
+addPipeline(pipelineKey: string, callback?: (prop) => string): void
 ```
 
-新增一個處理環節。**拼寫是 `Pipline`**。
+新增一個處理環節。
 
 | 參數 | 型別 | 必填 | 說明 |
 |---|---|---|---|
-| `piplineKey` | `string` | 是 | 環節名，同時是 props 上的鍵名 |
+| `pipelineKey` | `string` | 是 | 環節名，同時是 props 上的鍵名 |
 | `callback` | `Function` | 否 | 由「props 上該鍵的值」算出 handlerKey；省略時用預設取值（陣列取第一個、物件取 `value[0]`） |
 
 - 回傳：無
-- 副作用：插到鏈尾（`opts.piplines` 的既有順序在後）
-- 拋錯：`piplineKey` 非非空字串 → `Argument 1 must be NonBlankString`；`callback` 有值但非函數 → `Argument 2 must be Function`
+- 副作用：插到鏈尾（`opts.pipelines` 的既有順序在後）
+- 拋錯：`pipelineKey` 非非空字串 → `Argument 1 must be NonBlankString`；`callback` 有值但非函數 → `Argument 2 must be Function`
 
 ```js
-processor.addPipline('transform')
+processor.addPipeline('transform')
 processor.addHandler('transform', 'upper', value => String(value).toUpperCase())
 ```
 
-### addHandler(piplineKey, handlerKey, callback)
+### addHandler(pipelineKey, handlerKey, callback)
 
 ```js
-addHandler(piplineKey: string, handlerKey: string, callback: Function): void
+addHandler(pipelineKey: string, handlerKey: string, callback: Function): void
 ```
 
 為既有環節註冊 handler。
 
 | 參數 | 型別 | 必填 | 說明 |
 |---|---|---|---|
-| `piplineKey` | `string` | 是 | 必須已存在於 pipeline 表 |
+| `pipelineKey` | `string` | 是 | 必須已存在於 pipeline 表 |
 | `handlerKey` | `string` | 是 | 對應 props 上的值，如 `type:date` 的 `'date'` |
 | `callback` | `Function` | 是 | `(value, 主值, props) => 新值` |
 
@@ -145,7 +145,7 @@ addHandler(piplineKey: string, handlerKey: string, callback: Function): void
 - 副作用：寫入該環節的 handler 表；同名覆蓋
 - 拋錯：三個參數各自 `Argument 1/2/3 must be ...`
 
-⚠ `piplineKey` 不在 pipeline 表內時**不做任何事**，也不報錯。
+⚠ `pipelineKey` 不在 pipeline 表內時**不做任何事**，也不報錯。
 
 ```js
 processor.addHandler(ValueProcessor.CONST.TYPE, 'date', (values, _, props) => values)
@@ -156,7 +156,7 @@ processor.addHandler(ValueProcessor.CONST.TYPE, 'fallback', (values) => values)
 
 ## 相關
 
-- [ADR-0004 pipeline 與 piplines 凍結](../adr/0004-pipeline-and-piplines-freeze.md)
+- [ADR-0004 三段式 pipeline 與 handler 回退](../adr/0004-pipeline-and-handler-fallback.md)
 - [js-dsl-factory](./js-dsl-factory.md)
 - [js-dataset-helper](./js-dataset-helper.md)
 *（内容由AI生成，仅供参考）*

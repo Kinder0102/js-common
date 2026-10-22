@@ -93,7 +93,7 @@ AIGC:
 
 ### js-value-processor
 
-[`ValueProcessor`](./js-value-processor.md#valueprocessor)（[`process`](./js-value-processor.md#processel-value-key) [`addPipline`](./js-value-processor.md#addpiplinepiplinekey-callback) [`addHandler`](./js-value-processor.md#addhandlerpiplinekey-handlerkey-callback)）
+[`ValueProcessor`](./js-value-processor.md#valueprocessor)（[`process`](./js-value-processor.md#processel-value-key) [`addPipeline`](./js-value-processor.md#addpipelinepipelinekey-callback) [`addHandler`](./js-value-processor.md#addhandlerpipelinekey-handlerkey-callback)）
 
 ### js-dom-helper
 
@@ -168,7 +168,7 @@ processor.addHandler('transform', 'upper', value => String(value).toUpperCase())
 processor.process(el, value)
 ```
 
-`addHandler` 是三個參數：`(stage, handlerKey, fn)`，`handlerKey` 對應 DSL 的 `type:xxx` 中的 `xxx`，未命中走該 stage 的 `fallback`。構造選項名是 `piplines`（小寫 p），見 [ADR-0004](../adr/0004-pipeline-and-piplines-freeze.md)。
+`addHandler` 是三個參數：`(stage, handlerKey, fn)`，`handlerKey` 對應 DSL 的 `type:xxx` 中的 `xxx`，未命中走該 stage 的 `fallback`。構造選項名是 `pipelines`（複數），見 [ADR-0004](../adr/0004-pipeline-and-handler-fallback.md)。
 
 ### 不要做的事
 
