@@ -44,7 +44,7 @@
 | 文檔 | 內容 |
 |---|---|
 | [`docs/api/`](./docs/api/README.md) | 對外 API 全量條目：一頁一模塊、一節一符號 |
-| [`docs/adr/`](./docs/adr/) | 7 篇決策記錄：無根入口、`data-*` 即契約、可逆 class 標記、`piplines` 拼寫凍結、插件握手、`assert` 風格、模塊級緩存 |
+| [`docs/adr/`](./docs/adr/) | 8 篇決策記錄：無根入口、`data-*` 即契約、可逆 class 標記、`piplines` 拼寫凍結、插件握手、`assert` 風格、模塊級緩存、測試策略 |
 | [`docs/KNOWN-GAPS.md`](./docs/KNOWN-GAPS.md) | 已知缺陷與待辦（改代碼前必看） |
 | [`GLOSSARY.md`](./GLOSSARY.md) | 術語表 |
 | [`AGENTS.md`](./AGENTS.md) | 接手入口、分層與禁區 |
@@ -57,4 +57,4 @@
 - **構造選項拼寫是 `piplines`**（小寫 p），歷史遺留，見 [ADR-0004](./docs/adr/0004-pipeline-and-piplines-freeze.md)。
 - **`startsWith` / `endsWith` 不返回布爾值**：返回 `{ exist, value }`，別跟 `String.prototype` 同名方法混淆。
 - **`js-dom-helper` 是黑盒**：只依賴對外可觀察的行為，內部實現不受契約保護。
-- **沒有任何自動化測試**：改完跑 `npm run build`，再用 `dist/test.html` 手工驗證。
+- **測試只測公開面**：`npm test`（node:test + jsdom）、`npm run test:coverage` 出報告；已知缺陷按現狀以 characterization test 鎖住，見 [ADR-0008](./docs/adr/0008-testing-strategy.md)。改完先跑測試，再跑 `npm run build`。

@@ -75,3 +75,11 @@ _Avoid_: element cache
 **target**：
 `getTargets` 解析的描述串，取值 `self`、`parent`、`children`、`closest` 或 CSS 選擇器。
 _Avoid_: selector（僅當指 CSS 選擇器時使用）
+
+**characterization test**：
+按代碼**當前實際行爲**寫斷言的測試，包括已知缺陷的行爲。目的是「鎖住現狀，讓改動可見」，而非「證明正確」。缺陷修復時這類用例會變紅，屬預期信號。
+_Avoid_: regression test（回歸測試是目的，表徵測試是手段）、snapshot test
+
+**fixture**：
+單個用例自建、用後即清的 DOM 片段。本倉庫要求每個用例獨立 fixture，避免 `DOMHelper` 寫入的 class / dataset 互相污染。
+_Avoid_: mock、sandbox
