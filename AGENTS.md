@@ -42,7 +42,7 @@ L5  js-dom-helper
 規則：
 
 - **只能向下依賴**，禁止反向或同層互引。新增模塊必須先定層。
-- `src/` 內部一律**相對路徑** import（`./js-utils.js`）。不要用 `build.js` 裏那兩條 alias（`#`、`#libs`），它們與現狀脫節，見 KNOWN-GAPS。
+- `src/` 內部一律**相對路徑** import（`./js-utils.js`）。不要引入 `#` / `#libs` 前綴：`#` 在 Node 屬 package imports（包內私有），依賴方寫 `js-common/#/x` 會報 `ERR_PACKAGE_PATH_NOT_EXPORTED`，且部分下游打包器不解析 `imports` 字段。
 - 不引入任何運行時依賴。`esbuild` 只在 devDependencies。
 
 ## 三個核心概念
@@ -55,7 +55,7 @@ L5  js-dom-helper
 
 ## 改動前須知
 
-- **不要改 `piplines` 這個拼寫**。它出現在 `ValueProcessor` 的構造選項裏，下游可能已經按此書寫（詳見 ADR-0004）。若將來要修，必須同步改所有下游。
+- **`ValueProcessor` 一律用標準拼寫**：構造選項 `opts.pipelines`、註冊方法 `addPipeline()`。歷史錯拼 `piplines` / `addPipline` 已於 2026-10 徹底移除，不要寫回舊拼法（見 ADR-0004「修訂」）。
 - **不要改 `data-*` 鍵名或語義**。鍵名即公開 API，改動等於破壞下游 HTML。
 - **不要讓 `src/` 依賴 `dist/`**，也不要提交 `dist/`。
 - **`js-dom-helper` 視爲黑盒**：內部結構可重構，但對外可觀察的行爲（寫入的 class、`dom-helper-index` 系列取值、`setValueToElement` / `clearElement` 的效果）必須保持不變。
@@ -79,7 +79,7 @@ npm run test:coverage # 附覆蓋率報告（僅報告，不設硬閘）
 | 文檔 | 內容 |
 |---|---|
 | [`GLOSSARY.md`](./GLOSSARY.md) | 術語表 |
-| [`docs/adr/`](./docs/adr/) | 8 篇決策記錄：0001 無根入口、0002 `data-*` 即契約、0003 可逆 class 標記、0004 pipeline 與 `piplines` 拼寫凍結、0005 插件事件握手、0006 assert 風格、0007 模塊級緩存、0008 測試策略 |
+| [`docs/adr/`](./docs/adr/) | 8 篇決策記錄：0001 無根入口、0002 `data-*` 即契約、0003 可逆 class 標記、0004 三段式 pipeline 與 handler 回退、0005 插件事件握手、0006 assert 風格、0007 模塊級緩存、0008 測試策略 |
 | [`docs/api/`](./docs/api/README.md) | 對外 API 全量條目：一頁一模塊、一節一符號 |
 | [`docs/api/js-dsl-factory.md`](./docs/api/js-dsl-factory.md) | DSL 語法、轉義、filter 運算符 |
 | [`docs/api/js-dom-helper.md`](./docs/api/js-dom-helper.md) | `DOMHelper` 用法與全部 `data-*` 鍵 |

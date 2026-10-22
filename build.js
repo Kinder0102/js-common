@@ -18,10 +18,6 @@ for (const file of entryFiles) {
   await build({
     entryPoints: [entry],
     outfile: outPath,
-    alias: {
-      '#': path.resolve(__dirname, 'src'),
-      '#libs': path.resolve(__dirname, 'libs'),
-    },
     minify: true,
     bundle: true,
     sourcemap: true

@@ -91,7 +91,7 @@ describe('js-value-processor / pipeline ordering', () => {
         transform: { c: value => `${value}-transform` },
       },
     })
-    // DEFAULT_PIPLINE key order is type -> transform -> format (characterization).
+    // DEFAULT_PIPELINE key order is type -> transform -> format (characterization).
     assert.equal(processor.process(el, 'start'), 'start-type-transform-format')
   })
 
@@ -103,7 +103,7 @@ describe('js-value-processor / pipeline ordering', () => {
         extra: { z: value => `${value}-extra` },
       },
     })
-    processor.addPipline('extra')
+    processor.addPipeline('extra')
     assert.equal(processor.process(el, 'v'), 'v-type-extra')
   })
 
@@ -139,12 +139,12 @@ describe('js-value-processor / pipeline ordering', () => {
 })
 
 describe('js-value-processor / registration guards', () => {
-  test('addPipline validates its arguments', async () => {
+  test('addPipeline validates its arguments', async () => {
     const { default: ValueProcessorClass } = await import('../src/js-value-processor.js')
     const processor = new ValueProcessorClass({ key: 'value' })
-    assert.throws(() => processor.addPipline('', () => { }), /Argument 1 must be NonBlankString/)
-    assert.throws(() => processor.addPipline('k', 'nope'), /Argument 2 must be Function/)
-    assert.doesNotThrow(() => processor.addPipline('k', undefined))
+    assert.throws(() => processor.addPipeline('', () => { }), /Argument 1 must be NonBlankString/)
+    assert.throws(() => processor.addPipeline('k', 'nope'), /Argument 2 must be Function/)
+    assert.doesNotThrow(() => processor.addPipeline('k', undefined))
   })
 
   test('addHandler validates its arguments', () => {
@@ -155,7 +155,7 @@ describe('js-value-processor / registration guards', () => {
   })
 
   test('handlers for unregistered pipelines are silently dropped (characterization)', t => {
-    // addHandler only writes when piplineKey already exists; an unknown pipeline
+    // addHandler only writes when pipelineKey already exists; an unknown pipeline
     // neither throws nor takes effect.
     const el = mount(t, '<div data-af-value="type:a"></div>')
     const processor = makeProcessor()

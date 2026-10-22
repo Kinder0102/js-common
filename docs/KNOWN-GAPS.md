@@ -14,19 +14,7 @@
 
 `exports` 只列了 10 個子路徑，沒有 `"."`。因此 `import 'js-common'` 會拋 `ERR_PACKAGE_PATH_NOT_EXPORTED`。下游全部走子路徑，暫時無人踩到，但這意味着「沒有默認導出面」是既成事實，而非設計聲明。
 
-### 3. `build.js` 的 alias 已失效
-
-```js
-alias: {
-  '#': path.resolve(__dirname, 'src'),
-  '#libs': path.resolve(__dirname, 'libs'),
-}
-```
-
-- `libs/` 目錄不存在。
-- `src/` 中沒有任何 `from '#'` 形式的 import，全部使用相對路徑。
-
-這兩條 alias 是歷史殘留，刪掉不影響構建。
+> 原第 3 條（`build.js` 的 `#` / `#libs` alias）已移除：兩條 alias 從未被任何源碼匹配，刪除後 21 個產物逐位元組一致。編號保留空白，以免破壞 `docs/api/` 與 ADR 中的錨點引用。
 
 ### 4. `files` 字段缺失；測試只覆蓋公開面
 
@@ -36,9 +24,9 @@ alias: {
 
 ## 公開 API
 
-### 5. `piplines` 拼寫錯誤（不可隨手改）
+### 5. `pipelines` 命名（已於 2026-10 修正，編號留空保錨點）
 
-`ValueProcessor` 的構造選項寫作 `opts.piplines`（正確拼寫應爲 `pipelines`），並且方法名爲 `addPipline`。它是對外選項，下游 `ajax-form` 已經按此書寫 config。**改動必須同步所有下游**，因此本倉庫凍結該拼寫，見 ADR-0004。
+歷史上是 `piplines` / `addPipline`，曾以「下游已按此書寫」爲由凍結。2026-10 全盤核查推翻了該前提：三下游與業務項目零真實引用，`ajax-form` 只傳 `handlers`。現已改爲標準拼寫 `pipelines` / `addPipeline`，未保留別名。見 ADR-0004「修訂」。
 
 ### 6. `PluginHost.ready()` 的 resolve 不等於「插件已就緒」
 
